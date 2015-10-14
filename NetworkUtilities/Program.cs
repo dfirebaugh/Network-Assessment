@@ -12,7 +12,22 @@ namespace NetworkUtilities
         //public static IDictionary<string, Computers> comp = new Dictionary<string, Computers>();
 
         static void Main(string[] args)
-        {
+        {   
+            var task  = Task.Run(() => IPScanner.ScanIPsAsync());
+            task.Wait();
+            foreach(string ip in task.Result)
+            {
+                Console.WriteLine(ip);
+                var ports = PortScanner.Scan(ip, 0, 9999);
+
+                foreach (var port in ports)
+                {
+                    Console.WriteLine(string.Format("          open: {0}", port.ToString()));
+                }
+            }
+
+            Console.Write("Finished with new code");
+
             //var ipAddresses = IPScanner.ScanIPs();
             IPScanner.ScanIPs();
 

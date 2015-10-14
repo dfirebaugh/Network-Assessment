@@ -8,6 +8,7 @@ using System.Net;
 using System.Threading;
 using System.Net.Sockets;
 using NetworkUtilities;
+using System.Threading.Tasks;
 
 namespace NetworkUtilities
 {
@@ -109,6 +110,18 @@ namespace NetworkUtilities
             }
 
             countdown.Signal();
+        }
+
+        public static async Task<IEnumerable<string>> ScanIPsAsync()
+        {
+            string baseIP = "192.168.1.";
+
+            var tasks = Enumerable.Range(0, 255).Select(x => new Ping().SendPingAsync(baseIP + x.ToString() , 200));
+            var results = await Task.WhenAll(tasks);
+
+            return results
+                .Where(x => x.Status == IPStatus.Success)
+                .Select(x => x.Address.ToString()).ToList();
         }
 
     }
