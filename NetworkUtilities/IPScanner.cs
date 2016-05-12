@@ -2,13 +2,13 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using System.Net.NetworkInformation;
-using System.Diagnostics;
-using System.Net;
-using System.Threading;
-using System.Net.Sockets;
-using NetworkUtilities;
 using System.Threading.Tasks;
+using NetworkUtilities;
+using System.Net.NetworkInformation;
+using System.Net.Sockets;
+using System.Net;
+using System.Diagnostics;
+using System.Threading;
 
 namespace NetworkUtilities
 {
@@ -19,33 +19,42 @@ namespace NetworkUtilities
         static CountdownEvent countdown;
         static int upCount = 0;
         static object lockObj = new object();
-        const bool resolveNames = true;
+        const bool resolveNames = false;
+        public static IDictionary<string, string> strings = new Dictionary<string, string>();
+        public static List<string> comp = new List<string>();
 
-        public static void ScanIPs()
+        public static void Scanner()
         {
 
+            
 
-            //string hostName = Dns.GetHostName(); // Retrive the Name of HOST
+            //Get's preferred outbound IP address
+            string localIP;
+            using (Socket socket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, 0))
+            {
+                socket.Connect("10.0.2.4", 65530);
+                IPEndPoint endPoint = socket.LocalEndPoint as IPEndPoint;
+                localIP = endPoint.Address.ToString();
+            }
 
-            //Console.WriteLine(hostName);
+            //Console.WriteLine(localIP);
 
-            // Get the IP
 
-            //string myIP = Dns.GetHostByName(hostName).AddressList[0].ToString();
-
-            string myIP = "192.168.1.1";
-            var bytes = IPAddress.Parse(myIP).GetAddressBytes();
-            // set the value here
+            var bytes = IPAddress.Parse(localIP).GetAddressBytes();
             bytes[3] = 0;
 
-
-
             IPAddress ipAddress = new IPAddress(bytes);
-            var IPaddress1 = IPAddress.Parse(myIP).GetAddressBytes()[0].ToString() + "." + IPAddress.Parse(myIP).GetAddressBytes()[1].ToString() + "." + IPAddress.Parse(myIP).GetAddressBytes()[2].ToString() + ".";
+            var IPaddress1 = IPAddress.Parse(localIP).GetAddressBytes()[0].ToString() + "." + IPAddress.Parse(localIP).GetAddressBytes()[1].ToString() + "." + IPAddress.Parse(localIP).GetAddressBytes()[2].ToString() + ".";
 
-            Console.WriteLine("My IP Address is :" + myIP);
-            Console.WriteLine("Network :" + IPaddress1);
+            // Console.WriteLine(bytes);
+            //Console.WriteLine(ipAddress);
+            //Console.WriteLine(IPaddress1);
             //Console.ReadLine();
+            //Console.WriteLine("Scanning Network");
+
+
+
+
 
 
 
@@ -54,6 +63,10 @@ namespace NetworkUtilities
             Stopwatch sw = new Stopwatch();
             sw.Start();
             //string ipBase = "10.0.0.";
+
+
+
+
             for (int i = 1; i < 255; i++)
             {
                 string ip = IPaddress1 + i.ToString();
@@ -67,21 +80,29 @@ namespace NetworkUtilities
             countdown.Wait();
             sw.Stop();
             TimeSpan span = new TimeSpan(sw.ElapsedTicks);
-            //Console.WriteLine("Took {0} milliseconds. {1} hosts active.", sw.ElapsedMilliseconds, upCount);
-            //Console.WriteLine("\nPress any key to continue...");
-            //Console.ReadKey();
-        }
 
+
+
+
+
+
+            var list = strings.Keys.ToList();
+            list.Sort();
+
+        }
         static void p_PingCompleted(object sender, PingCompletedEventArgs e)
         {
+            //Dictionary<string, int> d = new Dictionary<string, int>();
+            
             string ip = (string)e.UserState;
             if (e.Reply != null && e.Reply.Status == IPStatus.Success)
             {
-                if (!Computers.comp.Contains(ip))
+                if (comp.Contains(ip))
                 {
-                    Computers.comp.Add(ip);
+                    comp.Add(ip);
                 }
-                /*if (resolveNames)
+                
+                if (resolveNames)
                 {
                     string name;
                     try
@@ -94,11 +115,16 @@ namespace NetworkUtilities
                         name = "?";
                     }
                     //Console.WriteLine("{0} ({1}) is up: ({2} ms)", ip, name, e.Reply.RoundtripTime);
+                    //comp[ip] = name;//.Add(ip,name);
+                    comp.Add(ip);
+
                 }
                 else
                 {
-                    Console.WriteLine("{0} is up: ({1} ms)", ip, e.Reply.RoundtripTime);
-                }*/
+                    //Console.WriteLine("{0} is up: ({1} ms)", ip, e.Reply.RoundtripTime);
+                    //comp[ip] = "?";// strings.Add(ip,"?");
+                    comp.Add(ip);
+                }
                 lock (lockObj)
                 {
                     upCount++;
@@ -106,23 +132,32 @@ namespace NetworkUtilities
             }
             else if (e.Reply == null)
             {
-             //   Console.WriteLine("Pinging {0} failed. (Null Reply object?)", ip);
+               // Console.WriteLine("Pinging {0} failed. (Null Reply object?)", ip);
             }
-
+            //Console.WriteLine(d);
+            
             countdown.Signal();
-        }
 
-        public static async Task<IEnumerable<string>> ScanIPsAsync()
+        }
+        public static void PrintNetwork()
         {
-            string baseIP = "192.168.1.";
 
-            var tasks = Enumerable.Range(0, 255).Select(x => new Ping().SendPingAsync(baseIP + x.ToString() , 200));
-            var results = await Task.WhenAll(tasks);
+            int count = 0 ;
 
-            return results
-                .Where(x => x.Status == IPStatus.Success)
-                .Select(x => x.Address.ToString()).ToList();
+            foreach (string ip in comp)
+            {
+                count++;
+                Console.WriteLine(string.Format("{0} \n", ip));
+            }
+                /*
+                foreach (KeyValuePair<string, string> kvp in strings)
+                {
+                    //textBox3.Text += ("Key = {0}, Value = {1}", kvp.Key, kvp.Value);
+                    Console.WriteLine(string.Format("{0} = {1}", kvp.Key, kvp.Value));
+                    count++;
+                }*/
+                Console.WriteLine(count + " alive");
         }
 
-    }
+}
 }
